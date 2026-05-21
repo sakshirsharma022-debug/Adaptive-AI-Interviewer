@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InterviewOS — AI Mock Interviewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #131316;
+    --bg3: #1a1a1f;
+    --border: rgba(255,255,255,0.07);
+    --border-hi: rgba(255,255,255,0.14);
+    --amber: #e8a020;
+    --amber-dim: rgba(232,160,32,0.12);
+    --amber-glow: rgba(232,160,32,0.25);
+    --text: #e8e6df;
+    --muted: #7a7870;
+    --muted2: #4a4845;
+    --success: #3dba7a;
+    --success-dim: rgba(61,186,122,0.1);
+    --danger: #e05050;
+    --danger-dim: rgba(224,80,80,0.1);
+    --info: #5b9cf6;
+    --info-dim: rgba(91,156,246,0.1);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    min-height: 100vh;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 0 18px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .logo { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+  .logo span { color: var(--amber); }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+
+  .session-pill {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg3);
+    border: 0.5px solid var(--border-hi);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .session-pill.visible { display: flex; }
+  .session-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+  .api-bar { display: flex; align-items: center; gap: 8px; }
+  .api-bar label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .api-bar input {
+    background: var(--bg3);
+    border: 0.5px solid var(--border-hi);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 5px 10px;
+    width: 200px;
+    outline: none;
+  }
+  .api-bar input:focus { border-color: var(--amber); }
+
+  /* STEPPER */
+  .stepper { display: flex; align-items: center; padding: 20px 0 0; }
+  .step { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted2); transition: color 0.3s; }
+  .step.active { color: var(--amber); }
+  .step.done { color: var(--muted); }
+  .step-num { width: 22px; height: 22px; border-radius: 50%; border: 1px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: 'IBM Plex Mono', monospace; flex-shrink: 0; transition: background 0.3s, border-color 0.3s; }
+  .step.active .step-num { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+  .step.done .step-num { background: var(--muted2); color: var(--bg); border-color: var(--muted2); }
+  .step-line { flex: 1; height: 0.5px; background: var(--border-hi); margin: 0 12px; }
+
+  main { padding: 40px 0 60px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* UPLOAD */
+  .upload-heading { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 10px; }
+  .upload-heading em { font-style: normal; color: var(--amber); }
+  .upload-sub { color: var(--muted); font-size: 15px; margin-bottom: 40px; }
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+
+  .drop-zone { border: 1px dashed var(--border-hi); border-radius: 14px; padding: 36px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; background: var(--bg2); }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--amber); background: var(--amber-dim); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 32px; margin-bottom: 12px; color: var(--muted); display: block; transition: color 0.2s; }
+  .drop-zone:hover .drop-icon { color: var(--amber); }
+  .drop-label { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); display: block; margin-bottom: 4px; }
+  .drop-hint { font-size: 12px; color: var(--muted2); }
+  .drop-name { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--amber); margin-top: 10px; display: block; min-height: 16px; }
+
+  /* BUTTONS */
+  .btn-primary { background: var(--amber); color: var(--bg); border: none; border-radius: 8px; padding: 13px 28px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.03em; cursor: pointer; transition: opacity 0.2s, transform 0.1s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-ghost { background: transparent; color: var(--muted); border: 0.5px solid var(--border-hi); border-radius: 8px; padding: 11px 22px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 400; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-hi); background: var(--bg3); }
+  .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-danger { background: transparent; color: var(--danger); border: 0.5px solid rgba(224,80,80,0.3); border-radius: 8px; padding: 11px 22px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; transition: background 0.2s, color 0.2s; display: inline-flex; align-items: center; gap: 7px; }
+  .btn-danger:hover { background: var(--danger-dim); }
+
+  /* STATUS BAR */
+  .status-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 20px; opacity: 0; transition: opacity 0.3s; }
+  .status-bar.visible { opacity: 1; }
+  .status-bar.loading { background: var(--bg3); border: 0.5px solid var(--border-hi); color: var(--muted); }
+  .status-bar.success { background: var(--success-dim); border: 0.5px solid rgba(61,186,122,0.2); color: var(--success); }
+  .status-bar.error { background: var(--danger-dim); border: 0.5px solid rgba(224,80,80,0.2); color: var(--danger); }
+
+  .spinner { width: 14px; height: 14px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* DIFFICULTY BADGE */
+  .difficulty-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: background 0.4s, color 0.4s;
+  }
+  .difficulty-tag.easy { background: var(--success-dim); color: var(--success); border: 0.5px solid rgba(61,186,122,0.2); }
+  .difficulty-tag.medium { background: var(--amber-dim); color: var(--amber); border: 0.5px solid rgba(232,160,32,0.2); }
+  .difficulty-tag.hard { background: var(--danger-dim); color: var(--danger); border: 0.5px solid rgba(224,80,80,0.2); }
+
+  /* INTERVIEW */
+  .interview-layout { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start; }
+
+  .q-panel { background: var(--bg2); border: 0.5px solid var(--border-hi); border-radius: 16px; overflow: hidden; }
+  .q-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 0.5px solid var(--border); background: var(--bg3); }
+  .q-badge { background: var(--amber-dim); color: var(--amber); border: 0.5px solid rgba(232,160,32,0.3); border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; padding: 3px 7px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .q-num { font-size: 12px; color: var(--muted); margin-left: auto; font-family: 'IBM Plex Mono', monospace; }
+
+  .q-body { padding: 28px 24px 20px; }
+  .q-text { font-family: 'IBM Plex Mono', monospace; font-size: 16px; line-height: 1.7; color: var(--text); min-height: 80px; }
+  .q-text.loading-q { color: var(--muted); animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .answer-area { padding: 0 24px 24px; }
+  .answer-area label { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .answer-area textarea { width: 100%; background: var(--bg3); border: 0.5px solid var(--border-hi); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.6; padding: 14px 16px; resize: vertical; min-height: 120px; outline: none; transition: border-color 0.2s; }
+  .answer-area textarea:focus { border-color: var(--amber); }
+  .answer-area textarea::placeholder { color: var(--muted2); }
+  .answer-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+  .eval-card { background: var(--bg2); border: 0.5px solid var(--border-hi); border-radius: 12px; padding: 18px 20px; margin-top: 20px; animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .eval-title { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .eval-title::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .eval-text {
+    font-size: 14px;
+    color: #d8d6cf;
+    line-height: 1.9;
+    white-space: pre-wrap;
+
+    font-family: 'DM Sans', sans-serif;
+
+    background: rgba(255,255,255,0.02);
+
+    border: 0.5px solid rgba(255,255,255,0.05);
+
+    padding: 18px 20px;
+
+    border-radius: 10px;
+
+    letter-spacing: 0.01em;
+  }
+  .eval-section {
+
+    margin-top: 18px;
+
+    margin-bottom: 8px;
+
+    font-family: 'Syne', sans-serif;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    color: var(--amber);
+
+    letter-spacing: -0.01em;
+  }
+
+  .eval-text strong {
+
+    color: var(--amber);
+
+    font-weight: 700;
+  }
+  .next-btn-row { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .section-gap { height: 24px; }
+
+  /* HISTORY SIDEBAR */
+  .history-panel { background: var(--bg2); border: 0.5px solid var(--border-hi); border-radius: 16px; overflow: hidden; max-height: 72vh; display: flex; flex-direction: column; }
+  .history-hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 0.5px solid var(--border); background: var(--bg3); flex-shrink: 0; }
+  .history-hdr-title { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .history-count { background: var(--bg); border: 0.5px solid var(--border-hi); border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 2px 7px; color: var(--amber); }
+  .history-list { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .history-list::-webkit-scrollbar { width: 4px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 4px; }
+
+  .history-item { background: var(--bg3); border: 0.5px solid var(--border); border-radius: 8px; padding: 12px 14px; font-size: 12px; line-height: 1.5; transition: border-color 0.2s; }
+  .history-item:hover { border-color: var(--border-hi); }
+  .h-q { font-family: 'IBM Plex Mono', monospace; color: var(--muted); margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .h-a { color: var(--text); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 5px; }
+  .h-e { color: var(--success); font-size: 11px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .history-empty { text-align: center; padding: 30px 20px; color: var(--muted2); font-size: 13px; }
+
+  .history-end-btn { padding: 12px; border-top: 0.5px solid var(--border); flex-shrink: 0; }
+  .history-end-btn button { width: 100%; }
+
+  /* FINAL FEEDBACK SCREEN */
+  .feedback-header { margin-bottom: 36px; }
+  .feedback-heading { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 8px; }
+  .feedback-heading em { font-style: normal; color: var(--amber); }
+  .feedback-sub { color: var(--muted); font-size: 15px; }
+
+  .feedback-grid { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+
+  .feedback-card { background: var(--bg2); border: 0.5px solid var(--border-hi); border-radius: 16px; overflow: hidden; }
+  .feedback-card-hdr { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 0.5px solid var(--border); background: var(--bg3); }
+  .feedback-card-hdr-title { font-size: 11px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .feedback-body {
+    padding: 28px;
+
+    font-size: 15px;
+
+    line-height: 2;
+
+    color: #ddd9d0;
+
+    white-space: pre-wrap;
+
+    min-height: 200px;
+
+    font-family: 'DM Sans', sans-serif;
+
+    letter-spacing: 0.01em;
+  }
+  .feedback-body.loading-fb { color: var(--muted); animation: pulse 1.5s ease-in-out infinite; }
+
+  .score-panel { background: var(--bg2); border: 0.5px solid var(--border-hi); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  .score-big { text-align: center; padding: 20px 0; border-bottom: 0.5px solid var(--border); }
+  .score-label { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .score-num { font-family: 'Syne', sans-serif; font-size: 64px; font-weight: 800; color: var(--amber); line-height: 1; }
+  .score-denom { font-size: 20px; color: var(--muted); font-weight: 400; }
+  .score-verdict { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
+  .stat-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--muted); }
+  .stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); }
+
+  .feedback-actions { margin-top: 28px; display: flex; gap: 12px; }
+
+  .report-section {
+
+    margin-top: 24px;
+
+    margin-bottom: 10px;
+
+    font-family: 'Syne', sans-serif;
+
+    font-size: 16px;
+
+    font-weight: 700;
+
+    color: var(--amber);
+
+    letter-spacing: -0.01em;
+  }
+
+  .feedback-body strong {
+
+    color: var(--amber);
+
+    font-weight: 700;
+  }
+
+  .overall-score {
+
+    margin: 22px 0;
+
+    padding: 14px 18px;
+
+    border-radius: 10px;
+
+    background: rgba(232,160,32,0.08);
+
+    border: 0.5px solid rgba(232,160,32,0.18);
+
+    font-family: 'Syne', sans-serif;
+
+    font-size: 20px;
+
+    font-weight: 700;
+
+    color: var(--amber);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 780px) {
+    .upload-grid { grid-template-columns: 1fr; }
+    .interview-layout { grid-template-columns: 1fr; }
+    .feedback-grid { grid-template-columns: 1fr; }
+    .history-panel { max-height: 40vh; }
+    .upload-heading, .feedback-heading { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Interview<span>OS</span></div>
+    <div class="header-right">
+      <div class="session-pill" id="session-pill">
+        <span class="session-dot"></span>
+        <span id="session-id-display">—</span>
+      </div>
+      <div class="api-bar">
+        <label for="apiBase">API</label>
+        <input type="text" id="apiBase" value="http://localhost:8000" placeholder="http://localhost:8000" />
+      </div>
+    </div>
+  </header>
+
+  <!-- STEPPER -->
+  <div class="stepper">
+    <div class="step active" id="step1"><div class="step-num">1</div><span>Upload</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="step2"><div class="step-num">2</div><span>Interview</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="step3"><div class="step-num">3</div><span>Results</span></div>
+  </div>
+
+  <main>
+
+    <!-- ===== SCREEN 1: UPLOAD ===== -->
+    <div class="screen active" id="screen-upload">
+      <div class="upload-heading">Ready for the<br /><em>real questions?</em></div>
+      <div class="upload-sub">Upload your résumé and the job description — we'll run you through a tailored mock interview.</div>
+
+      <div class="upload-grid">
+        <div class="drop-zone" id="dz-resume">
+          <input type="file" id="file-resume" accept=".pdf" />
+          <span class="drop-icon">📄</span>
+          <span class="drop-label">Résumé</span>
+          <span class="drop-hint">PDF only</span>
+          <span class="drop-name" id="name-resume"></span>
+        </div>
+        <div class="drop-zone" id="dz-jd">
+          <input type="file" id="file-jd" accept=".pdf" />
+          <span class="drop-icon">💼</span>
+          <span class="drop-label">Job Description</span>
+          <span class="drop-hint">PDF only</span>
+          <span class="drop-name" id="name-jd"></span>
+        </div>
+      </div>
+
+      <div class="status-bar" id="upload-status">
+        <div class="spinner" id="upload-spinner"></div>
+        <span id="upload-msg"></span>
+      </div>
+
+      <button class="btn-primary" id="btn-analyze" disabled>
+        <span>Analyze &amp; Start Interview</span>
+        <span>→</span>
+      </button>
+    </div>
+
+    <!-- ===== SCREEN 2: INTERVIEW ===== -->
+    <div class="screen" id="screen-interview">
+      <div class="interview-layout">
+
+        <div>
+          <div class="q-panel">
+            <div class="q-header">
+              <span class="q-badge">AI Interviewer</span>
+              <span class="difficulty-tag easy" id="difficulty-tag">Easy</span>
+              <span class="q-num" id="q-counter">Q #1</span>
+            </div>
+            <div class="q-body">
+              <div class="q-text" id="q-text">Generating your first question…</div>
+            </div>
+            <div class="answer-area">
+              <label for="answer-input">Your Answer</label>
+              <textarea id="answer-input" rows="5" placeholder="Type your answer here…" disabled></textarea>
+              <div class="answer-actions">
+                <button class="btn-primary" id="btn-submit" disabled>Submit Answer →</button>
+                <button class="btn-ghost" id="btn-skip" disabled>Skip question</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="eval-area"></div>
+
+          <div class="next-btn-row" id="next-row" style="display:none;">
+            <button class="btn-danger" id="btn-finish">End &amp; Get Report</button>
+            <button class="btn-primary" id="btn-next">Next Question →</button>
+          </div>
+
+          <div class="section-gap"></div>
+          <div class="status-bar" id="interview-status">
+            <div class="spinner"></div>
+            <span id="interview-msg"></span>
+          </div>
+        </div>
+
+        <!-- History sidebar -->
+        <div class="history-panel">
+          <div class="history-hdr">
+            <span class="history-hdr-title">Session History</span>
+            <span class="history-count" id="history-count">0</span>
+          </div>
+          <div class="history-list" id="history-list">
+            <div class="history-empty">No answers yet. Start answering to build your history.</div>
+          </div>
+          <div class="history-end-btn">
+            <button class="btn-danger" id="btn-finish-sidebar" style="font-size:12px; padding:9px 14px;">End Interview &amp; Get Report</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== SCREEN 3: FINAL FEEDBACK ===== -->
+    <div class="screen" id="screen-feedback">
+      <div class="feedback-header">
+        <div class="feedback-heading">Interview<br /><em>Complete.</em></div>
+        <div class="feedback-sub">Here's your personalised performance report based on this session.</div>
+      </div>
+
+      <div class="status-bar" id="feedback-status">
+        <div class="spinner"></div>
+        <span id="feedback-msg"></span>
+      </div>
+
+      <div class="feedback-grid">
+        <div class="feedback-card">
+          <div class="feedback-card-hdr">
+            <span class="feedback-card-hdr-title">Performance Report</span>
+          </div>
+          <div class="feedback-body" id="feedback-body">Generating your report…</div>
+        </div>
+
+        <div>
+          <div class="score-panel" id="score-panel">
+            <div class="score-big">
+              <div class="score-label">Interview Readiness</div>
+              <div>
+                <span class="score-num" id="score-num">—</span>
+                <span class="score-denom">/10</span>
+              </div>
+              <div class="score-verdict" id="score-verdict">Calculating…</div>
+            </div>
+            <div id="stat-rows">
+              <div class="stat-row"><span class="stat-label">Questions Answered</span><span class="stat-val" id="stat-answered">0</span></div>
+              <div class="stat-row"><span class="stat-label">Session Difficulty</span><span class="stat-val" id="stat-difficulty">—</span></div>
+              <div class="stat-row"><span class="stat-label">Session ID</span><span class="stat-val" id="stat-session">—</span></div>
+            </div>
+          </div>
+
+          <div class="feedback-actions">
+            <button class="btn-primary" id="btn-restart">New Session →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const API = () => ($('apiBase').value || 'http://localhost:8000').replace(/\/$/, '');
+
+let sessionId = null;
+let questionCount = 0;
+let currentQuestion = '';
+let sessionHistory = [];
+let currentDifficulty = 'easy';
+
+// ---- DROP ZONES ----
+function setupDropZone(dzId, inputId, nameId) {
+  const dz = $(dzId), inp = $(inputId), nm = $(nameId);
+  inp.addEventListener('change', () => { if (inp.files[0]) { nm.textContent = inp.files[0].name; checkReady(); } });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
+      nm.textContent = file.name; checkReady();
+    }
+  });
+}
+setupDropZone('dz-resume','file-resume','name-resume');
+setupDropZone('dz-jd','file-jd','name-jd');
+function checkReady() { $('btn-analyze').disabled = !($('file-resume').files[0] && $('file-jd').files[0]); }
+
+// ---- HELPERS ----
+function setStatus(barId, msgId, type, msg) {
+  const bar = $(barId); bar.className = 'status-bar visible ' + type;
+  $(msgId).textContent = msg;
+  const sp = bar.querySelector('.spinner');
+  if (sp) sp.style.display = type === 'loading' ? 'block' : 'none';
+}
+function clearStatus(barId) { $(barId).className = 'status-bar'; }
+
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    $('step'+i).className = 'step ' + (i < n ? 'done' : i === n ? 'active' : '');
+  });
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function setDifficultyTag(level) {
+  currentDifficulty = level;
+  const tag = $('difficulty-tag');
+  tag.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+  tag.className = 'difficulty-tag ' + level;
+}
+
+// ---- ANALYZE ----
+$('btn-analyze').addEventListener('click', async () => {
+  const resume = $('file-resume').files[0], jd = $('file-jd').files[0];
+  if (!resume || !jd) return;
+  $('btn-analyze').disabled = true;
+  setStatus('upload-status','upload-msg','loading','Parsing documents and building context…');
+
+  const fd = new FormData();
+  fd.append('resume', resume);
+  fd.append('jd', jd);
+
+  try {
+    const res = await fetch(API() + '/analyze', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+
+    sessionId = data.session_id;
+    $('session-id-display').textContent = sessionId.slice(0, 8) + '…';
+    $('session-pill').classList.add('visible');
+    $('stat-session').textContent = sessionId.slice(0,8) + '…';
+
+    setStatus('upload-status','upload-msg','success','Analysis complete — starting your interview…');
+    setTimeout(() => {
+      setStep(2);
+      showScreen('screen-interview');
+      loadQuestion();
+    }, 900);
+  } catch(err) {
+    setStatus('upload-status','upload-msg','error','Error: ' + err.message);
+    $('btn-analyze').disabled = false;
+  }
+});
+
+// ---- GENERATE QUESTION ----
+async function loadQuestion() {
+  questionCount++;
+  $('q-counter').textContent = 'Q #' + questionCount;
+  $('q-text').textContent = 'Generating question…';
+  $('q-text').classList.add('loading-q');
+  $('answer-input').value = '';
+  $('answer-input').disabled = true;
+  $('btn-submit').disabled = true;
+  $('btn-skip').disabled = true;
+  $('eval-area').innerHTML = '';
+  $('next-row').style.display = 'none';
+  clearStatus('interview-status');
+
+  try {
+    const res = await fetch(API() + '/generate_question', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+    currentQuestion = data.question || 'No question returned.';
+    $('q-text').textContent = currentQuestion;
+    $('q-text').classList.remove('loading-q');
+    $('answer-input').disabled = false;
+    $('btn-submit').disabled = false;
+    $('btn-skip').disabled = false;
+  } catch(err) {
+    $('q-text').textContent = 'Could not load question.';
+    $('q-text').classList.remove('loading-q');
+    setStatus('interview-status','interview-msg','error', err.message);
+  }
+}
+
+// ---- SUBMIT / SKIP ----
+$('btn-submit').addEventListener('click', async () => {
+  const ans = $('answer-input').value.trim();
+  if (ans) await submitAnswer(ans);
+});
+$('btn-skip').addEventListener('click', () => submitAnswer('[Skipped]'));
+
+async function submitAnswer(answer) {
+  $('btn-submit').disabled = true;
+  $('btn-skip').disabled = true;
+  $('answer-input').disabled = true;
+  setStatus('interview-status','interview-msg','loading','Evaluating your answer…');
+
+  try {
+    const res = await fetch(API() + '/evaluate_history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId, question: currentQuestion, answer })
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+
+    sessionHistory = data.conversation_history || [];
+
+    const lastEval =
+    (
+      sessionHistory[
+        sessionHistory.length - 1
+      ]?.evaluation || ''
+    ).toLowerCase();
+
+    const difficultySection =
+      lastEval
+        .split('difficulty recommendation')
+        .pop()
+        ?.slice(0, 50) || '';
+
+    if (difficultySection.includes('hard')) {
+
+      setDifficultyTag('hard');
+
+    }
+    else if (difficultySection.includes('medium')) {
+
+      setDifficultyTag('medium');
+
+    }
+    else {
+
+      setDifficultyTag('easy');
+
+    }
+
+    clearStatus('interview-status');
+    showEval(data.evaluation);
+    updateHistory();
+    $('next-row').style.display = 'flex';
+  } catch(err) {
+    setStatus('interview-status','interview-msg','error','Error: ' + err.message);
+    $('btn-submit').disabled = false;
+    $('btn-skip').disabled = false;
+    $('answer-input').disabled = false;
+  }
+}
+
+function showEval(evaluation) {
+  let txt =
+  typeof evaluation === 'object'
+    ? JSON.stringify(evaluation, null, 2)
+    : String(evaluation);
+
+  txt = txt
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(
+      /(\d+\.\s.*?:)/g,
+      '<div class="eval-section">$1</div>'
+    );
+  $('eval-area').innerHTML = `
+    <div class="eval-card">
+      <div class="eval-title">Evaluation</div>
+      <div class="eval-text">${txt}</div>
+    </div>`;
+}
+
+function updateHistory() {
+  const list = $('history-list');
+  $('history-count').textContent = sessionHistory.length;
+  if (!sessionHistory.length) { list.innerHTML = '<div class="history-empty">No answers yet.</div>'; return; }
+  list.innerHTML = [...sessionHistory].reverse().map(item => {
+    const evalTxt = typeof item.evaluation === 'object' ? JSON.stringify(item.evaluation) : (item.evaluation || '');
+    return `<div class="history-item">
+      <div class="h-q">${escHtml(item.question || '')}</div>
+      <div class="h-a">${escHtml(item.answer || '')}</div>
+      <div class="h-e">${escHtml(evalTxt.slice(0,120))}</div>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+$('btn-next').addEventListener('click', loadQuestion);
+
+// ---- END INTERVIEW / FINAL FEEDBACK ----
+async function endInterview() {
+  if (!sessionHistory.length) {
+    alert('Answer at least one question before generating a report.');
+    return;
+  }
+  setStep(3);
+  showScreen('screen-feedback');
+  $('stat-answered').textContent = sessionHistory.length;
+  $('stat-difficulty').textContent = currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1);
+  $('feedback-body').textContent = 'Generating your report…';
+  $('feedback-body').classList.add('loading-fb');
+  $('score-num').textContent = '—';
+  $('score-verdict').textContent = 'Calculating…';
+  setStatus('feedback-status','feedback-msg','loading','Analysing your full session with the AI…');
+
+  try {
+    const res = await fetch(API() + '/final_feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const data = await res.json();
+    const feedback = data.final_feedback || 'No feedback returned.';
+
+    clearStatus('feedback-status');
+    $('feedback-body').classList.remove('loading-fb');
+    let formattedFeedback = feedback
+
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+    .replace(
+      /(\d+\.\s.*?:)/g,
+      '<div class="report-section">$1</div>'
+    )
+
+    .replace(
+      /(Overall Score:.*)/gi,
+      '<div class="overall-score">$1</div>'
+    );
+
+    $('feedback-body').innerHTML = formattedFeedback;
+
+    // Parse score from "X/10" pattern in the feedback
+    const scoreMatch = feedback.match(/(\d+(?:\.\d+)?)\s*\/\s*10/);
+    if (scoreMatch) {
+      const score = parseFloat(scoreMatch[1]);
+      $('score-num').textContent = score;
+      $('score-verdict').textContent = score >= 8 ? 'Strong Candidate' : score >= 6 ? 'Internship Ready' : score >= 4 ? 'Developing' : 'Beginner Level';
+    } else {
+      $('score-num').textContent = '—';
+      $('score-verdict').textContent = 'See report';
+    }
+  } catch(err) {
+    $('feedback-body').classList.remove('loading-fb');
+    setStatus('feedback-status','feedback-msg','error','Error: ' + err.message);
+    $('feedback-body').textContent = 'Could not generate report. Check your connection and try again.';
+  }
+}
+
+$('btn-finish').addEventListener('click', endInterview);
+$('btn-finish-sidebar').addEventListener('click', endInterview);
+
+// ---- RESTART ----
+$('btn-restart').addEventListener('click', () => {
+  sessionId = null; questionCount = 0; currentQuestion = ''; sessionHistory = []; currentDifficulty = 'easy';
+  $('session-pill').classList.remove('visible');
+  $('session-id-display').textContent = '—';
+  $('file-resume').value = ''; $('file-jd').value = '';
+  $('name-resume').textContent = ''; $('name-jd').textContent = '';
+  $('btn-analyze').disabled = true;
+  $('answer-input').value = '';
+  $('eval-area').innerHTML = '';
+  $('history-list').innerHTML = '<div class="history-empty">No answers yet. Start answering to build your history.</div>';
+  $('history-count').textContent = '0';
+  $('next-row').style.display = 'none';
+  clearStatus('upload-status'); clearStatus('interview-status'); clearStatus('feedback-status');
+  setDifficultyTag('easy');
+  setStep(1);
+  showScreen('screen-upload');
+});
+</script>
+</body>
+</html>
