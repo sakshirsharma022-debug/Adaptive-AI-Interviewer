@@ -9,5 +9,5 @@ sentence-transformers
 python-dotenv
 groq
 numpy
-torch==2.2.2+cpu
+torch==2.2.2
 --extra-index-url https://download.pytorch.org/whl/cpu
