@@ -368,7 +368,7 @@
       </div>
       <div class="api-bar">
         <label for="apiBase">API</label>
-        <input type="text" id="apiBase" value="http://localhost:8000" placeholder="http://localhost:8000" />
+        <input type="text" id="apiBase" value="https://adaptive-ai-interviewer.onrender.com/" placeholder="http://localhost:8000" />
       </div>
     </div>
   </header>
@@ -521,7 +521,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const API = () => ($('apiBase').value || 'http://localhost:8000').replace(/\/$/, '');
+const API = () => ($('apiBase').value || 'https://adaptive-ai-interviewer.onrender.com/').replace(/\/$/, '');
 
 let sessionId = null;
 let questionCount = 0;
