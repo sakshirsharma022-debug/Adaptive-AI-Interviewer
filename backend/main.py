@@ -61,7 +61,7 @@ async def analyze_file(
 
             "covered_topics":[],
 
-            "role":jd_text[:300]
+            "role_type":jd_text[:300]
 
         }
         query = "What are the candidate's strengths in AI and RAG?"
