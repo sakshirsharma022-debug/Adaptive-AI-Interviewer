@@ -59,7 +59,9 @@ async def analyze_file(
 
             "jd_text": jd_text,
 
-            "covered_topics":[]
+            "covered_topics":[],
+
+            "role":jd_text[:300]
 
         }
         query = "What are the candidate's strengths in AI and RAG?"
@@ -96,6 +98,8 @@ async def generate_question(
 
         conversation_history = sessions[session_id]["conversation_history"]
 
+        recent_history = conversation_history[-4:]
+
         difficulty = sessions[session_id]["difficulty"]
 
         vector_store = sessions[session_id]["vector_store"]
@@ -103,6 +107,8 @@ async def generate_question(
         jd_text = sessions[session_id]["jd_text"]
 
         covered_topics = sessions[session_id]["covered_topics"]
+
+        role_type = sessions[session_id]["role_type"]
 
         query = f""" Important candidate skills and project experience relevant to:
         {
@@ -118,9 +124,10 @@ async def generate_question(
 
         question = generate_interview_question(
             context,
-            conversation_history,
+            recent_history,
             difficulty,
-            covered_topics
+            covered_topics,
+            role_type
         )
 
         return{

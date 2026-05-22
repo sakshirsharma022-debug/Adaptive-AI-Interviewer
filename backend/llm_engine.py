@@ -47,7 +47,8 @@ def generate_interview_question(
         retrieved_context,
         conversation_history,
         difficulty,
-        covered_topics 
+        covered_topics,
+        role_type
 ):
     stage_map = {
         "easy": "introductory",
@@ -95,6 +96,8 @@ def generate_interview_question(
     Previous Conversation:
     {conversation_history}
 
+
+
     --------------------------------------------------
     INTERVIEW STAGE BEHAVIOR
     --------------------------------------------------
@@ -131,19 +134,25 @@ def generate_interview_question(
 
     If the interview stage is "fundamental":
 
-    - Ask conceptual AI and RAG questions.
     - Focus on one concept at a time.
     - Test practical understanding instead of memorization.
     - Ask follow-up questions based on candidate experience.
 
-    Focus areas:
-    - embeddings
-    - chunking
-    - retrieval
-    - vector databases
-    - FastAPI
-    - APIs
-    - prompt engineering
+    Focus more on the candidate's uploaded resume, projects, technologies, tools, and job description requirements.
+
+    The interview should naturally adapt to the candidate's domain, experience level, and role expectations.
+
+    Example domains may include:
+    - AI/ML Engineering
+    - Backend Development
+    - Frontend Development
+    - Product Management
+    - Data Analytics
+    - DevOps
+    - Cloud Engineering
+
+    Current Candidate Role Context:
+    {role_type}
 
     GOOD fundamental questions:
     - Why did you choose FAISS for vector retrieval?
@@ -156,19 +165,19 @@ def generate_interview_question(
     If the interview stage is "advanced":
 
     - Ask practical architecture and optimization questions.
-    - Focus on production AI systems.
     - Ask scenario-based engineering questions.
     - Explore scaling and tradeoffs.
+    
+    Focus advanced questions around:
+    - system design
+    - scalability
+    - architecture decisions
+    - production challenges
+    - optimization tradeoffs
+    - real-world engineering decisions
 
-    Focus areas:
-    - latency optimization
-    - reranking
-    - caching
-    - scaling
-    - production deployment
-    - retrieval optimization
-    - multi-agent systems
-    - memory management
+    Adapt these topics naturally based on the candidate's domain and projects.
+    
 
     GOOD advanced questions:
     - How would you reduce retrieval latency in a production RAG pipeline?
@@ -183,8 +192,7 @@ def generate_interview_question(
     - Keep the conversation concise and natural like a real interviewer.
     - Avoid overly theatrical or assistant-like introductions.
     - Ask ONLY ONE question.
-    - Avoid repeating covered topics.
-    - Avoid asking generic textbook questions.
+    - Avoid directly repeating previous questions, but it is acceptable to revisit related concepts from a different angle if needed to continue the interview naturally.    .
     - Questions should feel personalized to the candidate.
     - Questions should feel like a real interviewer is speaking.
     - Avoid overly long questions.
